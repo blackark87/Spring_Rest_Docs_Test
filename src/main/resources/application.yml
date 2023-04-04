@@ -1,0 +1,9 @@
+spring:
+  profiles:
+    active: local
+    include: console-logging, file-logging, session-logging, error-logging
+  application:
+    name: Demo-${spring.profiles.active}
+
+logging:
+  config: classpath:logback-spring.xml

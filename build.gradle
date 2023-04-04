@@ -1,0 +1,117 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+    id 'org.springframework.boot' version '3.0.5'
+    id 'io.spring.dependency-management' version '1.1.0'
+    id 'org.asciidoctor.jvm.convert' version '2.4.0'
+    id 'org.jetbrains.kotlin.jvm' version '1.7.22'
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.7.22'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    set('snippetsDir', file("build/generated-snippets"))
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation 'org.seleniumhq.selenium:selenium-java:4.8.1'
+    implementation 'io.github.bonigarcia:webdrivermanager:5.3.2'
+    compileOnly 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+}
+
+tasks.withType(KotlinCompile).configureEach {
+    kotlinOptions {
+        freeCompilerArgs = ['-Xjsr305=strict']
+        jvmTarget = '17'
+    }
+}
+
+tasks.named('test') {
+    outputs.dir snippetsDir
+    useJUnitPlatform()
+}
+
+asciidoctor {
+    def isDev = false
+    if (project.hasProperty('spring.profiles.active')) {
+        isDev = project.property('spring.profiles.active') == 'dev'
+    }
+    if (isDev) {
+        enabled = false
+    }
+
+    mustRunAfter test
+    setSourceDir(file("src/docs/asciidoc"))
+
+    outputDir = file("${buildDir}/doc/asciidoc/html5")
+    doFirst {
+        outputDir.mkdirs()
+    }
+
+    attributes(
+            'doctype': 'article',
+            'toc': 'left',
+            'tocLevels': 3,
+            'icons': 'font',
+            'source-highlighter': 'rogue',
+            'hardbreaks': true,
+            'idprefix': '',
+            'idseparator': '-',
+            'docinfo': 'shared-head',
+            'backend': 'html5',
+            'snippets': snippetsDir
+    )
+}
+
+tasks.register('copyHtml', Copy) {
+    dependsOn asciidoctor
+    from "${buildDir}/doc/asciidoc/html5"
+    into 'src/main/resources/static'
+
+    onlyIf {
+        file("${project.buildDir}/doc/asciidoc/html5").listFiles()?.any { file ->
+            file.name.endsWith(".html")
+        } == true
+    }
+
+    doFirst {
+        println "Checking input directory (absolute path): ${file("${project.projectDir}/${source}").absolutePath}"
+        file("${project.projectDir}/${source}").listFiles()?.forEach { file ->
+            println "  - ${file.name}"
+        }
+        println "Output directory (absolute path): ${file("${project.projectDir}/${destinationDir}").absolutePath}"
+    }
+
+    doLast {
+        println "Copying HTML files from ${project.projectDir}/${source} to ${project.projectDir}/${destinationDir}"
+    }
+}
+
+tasks.register("generateAndCopyHtml") {
+    dependsOn asciidoctor
+    dependsOn copyHtml
+    mustRunAfter asciidoctor
+}
+
+build.dependsOn('generateAndCopyHtml')

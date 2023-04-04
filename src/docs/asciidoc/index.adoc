@@ -1,0 +1,23 @@
+= Selenium Debugger API Guide
+
+This guide helps you understand the Selenium Debugger API.
+
+== Open and Close URL
+
+=== Request
+
+include::{snippets}/openAndCloseUrl/http-request.adoc[]
+
+=== Response
+
+include::{snippets}/openAndCloseUrl/http-response.adoc[]
+
+== Run All Tests
+
+=== Request
+
+include::{snippets}/runAllTests/http-request.adoc[]
+
+=== Response
+
+include::{snippets}/runAllTests/http-response.adoc[]
